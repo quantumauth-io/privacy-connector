@@ -1,4 +1,12 @@
-# privacy-connector
+# Privacy Connector
+
+[![CI](https://github.com/quantumauth-io/privacy-connector/actions/workflows/ci.yml/badge.svg)](
+https://github.com/quantumauth-io/privacy-connector/actions/workflows/ci.yml
+)
+[![codecov](https://codecov.io/gh/quantumauth-io/privacy-connector/branch/main/graph/badge.svg)](
+https://codecov.io/gh/quantumauth-io/privacy-connector
+)
+
 
 A privacy-first Web3 wallet connector that avoids third-party tracking and exposes connection transparency.
 
