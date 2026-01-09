@@ -1,6 +1,28 @@
-import {BrowserProvider} from "ethers";
-import type {ConnectedSession, ConnectorInfo, Eip1193Provider, PrivacyFirstConnector, WalletCandidate,} from "./types";
-import {discoverEip6963Wallets} from "./discovery/eip6963";
+import { BrowserProvider } from "ethers";
+import type {
+    ConnectedSession,
+    ConnectorInfo,
+    Eip1193Provider,
+    PrivacyFirstConnector,
+    WalletCandidate,
+} from "./types";
+import { discoverEip6963Wallets } from "./discovery/eip6963";
+
+export function parseChainId(
+    chainIdHex: unknown,
+    _isFinite: (n: number) => boolean = Number.isFinite,
+): number {
+    if (typeof chainIdHex !== "string") throw new Error("Invalid chainId response");
+    if (!/^0x[0-9a-fA-F]+$/.test(chainIdHex)) throw new Error("Invalid chainId format");
+
+    const n = Number.parseInt(chainIdHex, 16);
+    if (!_isFinite(n)) throw new Error("Invalid chainId value");
+    return n;
+}
+
+function isStringArray(x: unknown): x is string[] {
+    return Array.isArray(x) && x.every((v) => typeof v === "string");
+}
 
 export function createPrivacyFirstConnector(params?: {
     quantumAuthCandidate?: () => Promise<WalletCandidate | null>;
@@ -25,28 +47,29 @@ export function createPrivacyFirstConnector(params?: {
         },
 
         async connect(candidate, opts) {
+            const provider = candidate.provider;
+
             // 1) request accounts
-            const accounts = (await candidate.provider.request({
-                method: "eth_requestAccounts",
-            })) as string[];
+            const accountsRes = await provider.request({ method: "eth_requestAccounts" });
+            const accounts = isStringArray(accountsRes) ? accountsRes : [];
 
             // 2) chainId
-            const chainIdHex = (await candidate.provider.request({ method: "eth_chainId" })) as string;
-            const chainId = parseInt(chainIdHex, 16);
+            const chainIdHex = await provider.request({ method: "eth_chainId" });
+            const chainId = parseChainId(chainIdHex);
 
             // 3) optional chain switch
             if (opts?.chainId && opts.chainId !== chainId) {
-                await candidate.provider.request({
+                await provider.request({
                     method: "wallet_switchEthereumChain",
                     params: [{ chainId: `0x${opts.chainId.toString(16)}` }],
                 });
             }
 
             // 4) ethers wrapper
-            const ethersProvider = new BrowserProvider(candidate.provider);
+            const ethersProvider = new BrowserProvider(provider);
 
             // 5) connector transparency (wallet method if available, else inferred)
-            const connectorInfo = await getConnectorInfo(candidate.provider, {
+            const connectorInfo = await getConnectorInfo(provider, {
                 connectorType: candidate.hints?.isInjected ? "injected" : "custom",
                 connectorName: candidate.name,
                 mediation: "direct",
@@ -56,9 +79,10 @@ export function createPrivacyFirstConnector(params?: {
 
             let disconnected = false;
 
+            // Create session object first so listeners can mutate it
             const session: ConnectedSession = {
                 candidate,
-                provider: candidate.provider,
+                provider,
                 ethersProvider,
                 accounts,
                 chainId,
@@ -66,18 +90,49 @@ export function createPrivacyFirstConnector(params?: {
 
                 disconnect() {
                     disconnected = true;
-                    return Promise.resolve();
+
+                    // Detach listeners if supported
+                    if (provider.removeListener) {
+                        provider.removeListener("accountsChanged", onAccountsChanged);
+                        provider.removeListener("chainChanged", onChainChanged);
+                    }
+
                     // Most wallets don’t support a real disconnect; we just detach listeners in v1.
+                    return Promise.resolve();
                 },
 
                 async refresh() {
                     if (disconnected) return;
-                    const a = (await candidate.provider.request({ method: "eth_accounts" })) as string[];
-                    const cHex = (await candidate.provider.request({ method: "eth_chainId" })) as string;
-                    session.accounts = a;
-                    session.chainId = parseInt(cHex, 16);
+
+                    const aRes = await provider.request({ method: "eth_accounts" });
+                    const cRes = await provider.request({ method: "eth_chainId" });
+
+                    session.accounts = isStringArray(aRes) ? aRes : [];
+                    session.chainId = parseChainId(cRes);
                 },
             };
+
+            // --- EIP-1193 event listeners (optional) ---
+            // Must be declared AFTER session is created (closure uses session)
+            function onAccountsChanged(accs: unknown) {
+                if (disconnected) return;
+                session.accounts = isStringArray(accs) ? accs : [];
+            }
+
+            function onChainChanged(cid: unknown) {
+                if (disconnected) return;
+                try {
+                    session.chainId = parseChainId(cid);
+                } catch {
+                    // If a wallet emits a non-hex chainChanged payload, ignore it.
+                }
+            }
+
+            // Attach listeners if supported
+            if (provider.on) {
+                provider.on("accountsChanged", onAccountsChanged);
+                provider.on("chainChanged", onChainChanged);
+            }
 
             return session;
         },
@@ -120,6 +175,6 @@ async function getConnectorInfo(
         thirdPartyInfrastructure: fallback?.thirdPartyInfrastructure ?? false,
         rpcVisibility: fallback?.rpcVisibility ?? "direct",
         source: "inferred",
-        ...(fallback?.relayProvider ? {relayProvider: fallback.relayProvider} : {}),
+        ...(fallback?.relayProvider ? { relayProvider: fallback.relayProvider } : {}),
     };
 }
