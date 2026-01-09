@@ -1,2 +1,2 @@
-export * from "./types";
-export { createPrivacyFirstConnector } from "./session";
+// src/index.ts
+export * from "./core";

@@ -43,7 +43,7 @@ export function createPrivacyFirstConnector(params?: {
             }
 
             // 4) ethers wrapper
-            const ethersProvider = new BrowserProvider(candidate.provider as any);
+            const ethersProvider = new BrowserProvider(candidate.provider);
 
             // 5) connector transparency (wallet method if available, else inferred)
             const connectorInfo = await getConnectorInfo(candidate.provider, {
@@ -64,8 +64,9 @@ export function createPrivacyFirstConnector(params?: {
                 chainId,
                 connectorInfo,
 
-                async disconnect() {
+                disconnect() {
                     disconnected = true;
+                    return Promise.resolve();
                     // Most wallets don’t support a real disconnect; we just detach listeners in v1.
                 },
 

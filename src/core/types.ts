@@ -18,8 +18,9 @@ export interface ConnectorInfo {
 
 export interface Eip1193Provider {
     request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
-    on?(event: string, listener: (...args: any[]) => void): void;
-    removeListener?(event: string, listener: (...args: any[]) => void): void;
+
+    on?(event: string, listener: (...args: unknown[]) => void): void;
+    removeListener?(event: string, listener: (...args: unknown[]) => void): void;
 }
 
 export interface WalletCandidate {
