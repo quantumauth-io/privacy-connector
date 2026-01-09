@@ -3,19 +3,26 @@ import { describe, expect, it, vi } from "vitest";
 import { createPrivacyFirstConnector, parseChainId } from "./session";
 import type { Eip1193Provider, WalletCandidate } from "./types";
 
+type EventedProvider = Eip1193Provider & {
+    emit: (event: string, ...args: unknown[]) => void;
+    _listenerCount: (event: string) => number;
+};
+
 /**
  * Mocks
  */
 vi.mock("./discovery/eip6963", () => {
     return {
-        discoverEip6963Wallets: vi.fn(async () => [
-            {
-                id: "eip6963",
-                name: "EIP6963 Wallet",
-                provider: { request: () => Promise.resolve(null) },
-                hints: { isInjected: true },
-            },
-        ]),
+        discoverEip6963Wallets: vi.fn(() =>
+            Promise.resolve([
+                {
+                    id: "eip6963",
+                    name: "EIP6963 Wallet",
+                    provider: { request: () => Promise.resolve(null) },
+                    hints: { isInjected: true },
+                },
+            ]),
+        ),
     };
 });
 
@@ -63,7 +70,7 @@ function makeProvider(opts: {
     };
 }
 
-function makeEventedProvider() {
+function makeEventedProvider(): EventedProvider {
     const listeners = new Map<string, Set<(...args: unknown[]) => void>>();
 
     return {
@@ -110,7 +117,7 @@ describe("session / connector", () => {
 
             const connector = createPrivacyFirstConnector({
                 enableEip6963: false,
-                quantumAuthCandidate: async () => makeCandidate({ id: "qa", name: "QuantumAuth", provider: qaProvider }),
+                quantumAuthCandidate: () =>  Promise.resolve(makeCandidate({ id: "qa", name: "QuantumAuth", provider: qaProvider })),
             });
 
             const wallets = await connector.discoverWallets();
@@ -120,9 +127,7 @@ describe("session / connector", () => {
         it("ignores quantumAuthCandidate when it throws", async () => {
             const connector = createPrivacyFirstConnector({
                 enableEip6963: false,
-                quantumAuthCandidate: async () => {
-                    throw new Error("boom");
-                },
+                quantumAuthCandidate: () => Promise.reject(new Error("boom")),
             });
 
             const wallets = await connector.discoverWallets();
@@ -440,7 +445,7 @@ describe("session / connector", () => {
         it("wires provider event listeners and disconnect removes them", async () => {
             const p = makeEventedProvider();
             const connector = createPrivacyFirstConnector();
-            const wallet = makeCandidate({ provider: p as any });
+            const wallet = makeCandidate({ provider: p });
 
             const session = await connector.connect(wallet);
 
@@ -456,7 +461,7 @@ describe("session / connector", () => {
         it("updates session on accountsChanged event", async () => {
             const p = makeEventedProvider();
             const connector = createPrivacyFirstConnector();
-            const wallet = makeCandidate({ provider: p as any });
+            const wallet = makeCandidate({ provider: p });
 
             const session = await connector.connect(wallet);
 
@@ -467,7 +472,7 @@ describe("session / connector", () => {
         it("updates session on chainChanged event", async () => {
             const p = makeEventedProvider();
             const connector = createPrivacyFirstConnector();
-            const wallet = makeCandidate({ provider: p as any });
+            const wallet = makeCandidate({ provider: p });
 
             const session = await connector.connect(wallet);
 
