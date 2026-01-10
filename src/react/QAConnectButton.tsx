@@ -48,6 +48,11 @@ export function QAConnectButton(props: {
         [qa],
     );
 
+    const onDisconnect = useCallback(async () => {
+        await qa.disconnect();
+        setOpen(false);
+    }, [qa]);
+
     const onClose = useCallback(() => setOpen(false), []);
 
     return (
@@ -79,6 +84,12 @@ export function QAConnectButton(props: {
                     if (qa.isConnected) return;
                     void onSelect(wallet);
                 }}
+                // ✅ ADD THESE THREE:
+                connectorInfo={qa.connectorInfo}
+                connectorDisclosure={qa.connectorDisclosure}
+                connectedWalletId={qa.connectorInfo?.id ?? null}
+                connectedAddress={qa.address}
+                onDisconnect={() => void onDisconnect()}
             />
 
             {showDetailsWhenConnected && qa.isConnected ? (

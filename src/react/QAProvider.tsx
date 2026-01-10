@@ -7,6 +7,7 @@ import {
     type ConnectorInfo,
     type Eip1193Provider,
     type WalletCandidate,
+    type ConnectorDisclosure
 } from "../core";
 
 type QAState = {
@@ -27,6 +28,7 @@ type QAState = {
     provider: Eip1193Provider | null;
     ethersProvider: BrowserProvider | null;
     connectorInfo: ConnectorInfo | null;
+    connectorDisclosure: ConnectorDisclosure;
 
     // Actions
     discover: () => Promise<WalletCandidate[]>;
@@ -65,6 +67,7 @@ export function QAProvider(props: {
     const [provider, setProvider] = useState<Eip1193Provider | null>(null);
     const [ethersProvider, setEthersProvider] = useState<BrowserProvider | null>(null);
     const [connectorInfo, setConnectorInfo] = useState<ConnectorInfo | null>(null);
+    const [connectorDisclosure] = useState(() => connectorRef.current.getConnectorDisclosure());
 
     const clearError = useCallback(() => setError(null), []);
 
@@ -132,11 +135,13 @@ export function QAProvider(props: {
             provider,
             ethersProvider,
             connectorInfo,
+            connectorDisclosure,
 
             discover,
             connect,
             disconnect,
             clearError,
+
         }),
         [
             isConnecting,
@@ -149,6 +154,7 @@ export function QAProvider(props: {
             provider,
             ethersProvider,
             connectorInfo,
+            connectorDisclosure,
             discover,
             connect,
             disconnect,

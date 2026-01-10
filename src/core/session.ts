@@ -7,6 +7,8 @@ import type {
     WalletCandidate,
 } from "./types";
 import { discoverEip6963Wallets } from "./discovery/eip6963";
+import type { ConnectorDisclosure } from "./types";
+
 
 export function parseChainId(
     chainIdHex: unknown,
@@ -69,7 +71,8 @@ export function createPrivacyFirstConnector(params?: {
             const ethersProvider = new BrowserProvider(provider);
 
             // 5) connector transparency (wallet method if available, else inferred)
-            const connectorInfo = await getConnectorInfo(provider, {
+            // ✅ IMPORTANT: inject candidate.id as the stable id
+            const connectorInfo = await getConnectorInfo(provider, candidate.id, {
                 connectorType: candidate.hints?.isInjected ? "injected" : "custom",
                 connectorName: candidate.name,
                 mediation: "direct",
@@ -88,7 +91,7 @@ export function createPrivacyFirstConnector(params?: {
                 chainId,
                 connectorInfo,
 
-                disconnect() {
+                async disconnect() {
                     disconnected = true;
 
                     // Detach listeners if supported
@@ -97,8 +100,15 @@ export function createPrivacyFirstConnector(params?: {
                         provider.removeListener("chainChanged", onChainChanged);
                     }
 
-                    // Most wallets don’t support a real disconnect; we just detach listeners in v1.
-                    return Promise.resolve();
+                    // Best-effort revoke permissions (optional; most wallets ignore it)
+                    try {
+                        await provider.request?.({
+                            method: "wallet_revokePermissions",
+                            params: [{ eth_accounts: {} }],
+                        });
+                    } catch {
+                        // ignore
+                    }
                 },
 
                 async refresh() {
@@ -113,7 +123,6 @@ export function createPrivacyFirstConnector(params?: {
             };
 
             // --- EIP-1193 event listeners (optional) ---
-            // Must be declared AFTER session is created (closure uses session)
             function onAccountsChanged(accs: unknown) {
                 if (disconnected) return;
                 session.accounts = isStringArray(accs) ? accs : [];
@@ -124,7 +133,7 @@ export function createPrivacyFirstConnector(params?: {
                 try {
                     session.chainId = parseChainId(cid);
                 } catch {
-                    // If a wallet emits a non-hex chainChanged payload, ignore it.
+                    // ignore non-hex payloads
                 }
             }
 
@@ -137,8 +146,33 @@ export function createPrivacyFirstConnector(params?: {
             return session;
         },
 
-        async getConnectorInfo(provider, fallback) {
-            return getConnectorInfo(provider, fallback);
+        // ✅ Make this identity-safe: require walletId from caller
+        async getConnectorInfo(provider, walletId, fallback) {
+            return getConnectorInfo(provider, walletId, fallback);
+        },
+
+        getConnectorDisclosure() {
+            // Disclosure authored by the connector itself (not the wallet)
+            const disclosure: ConnectorDisclosure = {
+                source: "connector",
+                networkRequests: "none",
+                telemetry: "none",
+                persistentStorage: "none",
+                discovery: {
+                    eip6963: "user_gesture_only",
+                    remoteCalls: false,
+                },
+                iconPolicy: "data_uri_only",
+                logs: "local_only",
+                notes: [
+                    "No third-party scripts",
+                    "No analytics or telemetry",
+                    "No remote icon fetching",
+                    "Discovery only on user interaction",
+                ],
+            };
+
+            return disclosure;
         },
     };
 }
@@ -157,18 +191,28 @@ function dedupe(wallets: WalletCandidate[]): WalletCandidate[] {
 
 async function getConnectorInfo(
     provider: Eip1193Provider,
+    walletId: string,
     fallback?: Partial<ConnectorInfo>,
 ): Promise<ConnectorInfo> {
     try {
         const res = await provider.request({ method: "eth_getConnectorInfo" });
+
         if (res && typeof res === "object") {
-            return { ...(res as ConnectorInfo), source: "wallet" };
+            // ✅ never trust id/source from wallet
+            const walletRes = res as Partial<Omit<ConnectorInfo, "id" | "source">>;
+
+            return {
+                ...walletRes,
+                id: walletId,
+                source: "wallet",
+            } as ConnectorInfo;
         }
     } catch {
         // ignore; infer below
     }
 
     return {
+        id: walletId,
         connectorType: fallback?.connectorType ?? "custom",
         connectorName: fallback?.connectorName ?? "Unknown",
         mediation: fallback?.mediation ?? "direct",
@@ -178,3 +222,5 @@ async function getConnectorInfo(
         ...(fallback?.relayProvider ? { relayProvider: fallback.relayProvider } : {}),
     };
 }
+
+

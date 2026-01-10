@@ -4,7 +4,31 @@ export type ConnectorType = "injected" | "walletconnect" | "custom";
 export type Mediation = "direct" | "relay";
 export type RpcVisibility = "direct" | "proxied";
 
+export type NetworkRequests = "none" | "rpc_only" | "third_party";
+export type Telemetry = "none" | "anonymous" | "pseudonymous";
+export type PersistentStorage = "none" | "local";
+export type DiscoveryPolicy = "user_gesture_only" | "automatic";
+
+export interface ConnectorDisclosure {
+    source: "connector";
+
+    networkRequests: NetworkRequests;
+    telemetry: Telemetry;
+    persistentStorage: PersistentStorage;
+
+    discovery: {
+        eip6963: DiscoveryPolicy;
+        remoteCalls: boolean;
+    };
+
+    iconPolicy: "data_uri_only" | "remote_allowed";
+    logs: "none" | "local_only" | "remote";
+
+    notes?: string[]; // short human-friendly promises
+}
+
 export interface ConnectorInfo {
+    id: string;
     connectorType: ConnectorType;
     connectorName: string;
     mediation: Mediation;
@@ -51,5 +75,6 @@ export interface ConnectedSession {
 export interface PrivacyFirstConnector {
     discoverWallets(): Promise<WalletCandidate[]>;
     connect(candidate: WalletCandidate, opts?: ConnectOptions): Promise<ConnectedSession>;
-    getConnectorInfo(provider: Eip1193Provider, fallback?: Partial<ConnectorInfo>): Promise<ConnectorInfo>;
+    getConnectorInfo(provider: Eip1193Provider, walletId: string, fallback?: Partial<ConnectorInfo>): Promise<ConnectorInfo>;
+    getConnectorDisclosure(): ConnectorDisclosure;
 }
