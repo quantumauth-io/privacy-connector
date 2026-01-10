@@ -1,4 +1,6 @@
 # Privacy Connector
+![Powered by QuantumAuth](https://img.shields.io/badge/Powered%20By-QuantumAuth-1a1a1a?style=for-the-badge&logo=dependabot)
+<!-- Badges -->
 
 [![CI](https://github.com/quantumauth-io/privacy-connector/actions/workflows/ci.yml/badge.svg)](
 https://github.com/quantumauth-io/privacy-connector/actions/workflows/ci.yml
