@@ -90,6 +90,10 @@ export function QAConnectButton(props: {
                 connectedWalletId={qa.connectorInfo?.id ?? null}
                 connectedAddress={qa.address}
                 onDisconnect={() => void onDisconnect()}
+                brand={{
+                    name: "QuantumAuth",
+                    logoSrc: "/assets/logo.svg",
+                }}
             />
 
             {showDetailsWhenConnected && qa.isConnected ? (
