@@ -3,11 +3,13 @@ import { createPrivacyFirstConnector } from "./session";
 import type { WalletCandidate } from "./types";
 
 vi.mock("./discovery/eip6963", () => ({
-    discoverEip6963Wallets: vi.fn(async () => [
-        { id: "dup", name: "Dup", provider: { request: async () => null } },
-        { id: "uniq", name: "Uniq", provider: { request: async () => null } },
-        { id: "dup", name: "DupAgain", provider: { request: async () => null } },
-    ]),
+    discoverEip6963Wallets: vi.fn(() =>
+        Promise.resolve([
+            { id: "dup", name: "Dup", provider: { request: () => Promise.resolve(null) } },
+            { id: "uniq", name: "Uniq", provider: { request: () => Promise.resolve(null) } },
+            { id: "dup", name: "DupAgain", provider: { request: () => Promise.resolve(null) } },
+        ]),
+    ),
 }));
 
 describe("discoverWallets + dedupe", () => {
@@ -15,26 +17,23 @@ describe("discoverWallets + dedupe", () => {
         const qaCandidate: WalletCandidate = {
             id: "qa",
             name: "QuantumAuth",
-            provider: { request: async () => null },
+            provider: { request: () => Promise.resolve(null) },
         };
 
         const connector = createPrivacyFirstConnector({
             enableEip6963: true,
-            quantumAuthCandidate: async () => qaCandidate,
+            quantumAuthCandidate: () => Promise.resolve(qaCandidate),
         });
 
         const wallets = await connector.discoverWallets();
 
-        // qa + dup + uniq = 3 after dedupe
         expect(wallets.map((w) => w.id)).toEqual(["qa", "dup", "uniq"]);
     });
 
     it("handles quantumAuthCandidate throwing (still returns eip6963 list)", async () => {
         const connector = createPrivacyFirstConnector({
             enableEip6963: true,
-            quantumAuthCandidate: async () => {
-                throw new Error("boom");
-            },
+            quantumAuthCandidate: () => Promise.reject(new Error("boom")),
         });
 
         const wallets = await connector.discoverWallets();
