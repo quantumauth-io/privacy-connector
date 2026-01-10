@@ -9,6 +9,8 @@ https://codecov.io/gh/quantumauth-io/privacy-connector
 [![npm version](https://img.shields.io/npm/v/@quantumauth/privacy-connector.svg)](https://www.npmjs.com/package/@quantumauth/privacy-connector)
 [![license](https://img.shields.io/npm/l/@quantumauth/privacy-connector.svg)](LICENSE)
 
+![Coverage sunburst](https://codecov.io/gh/quantumauth-io/privacy-connector/graphs/sunburst.svg?token=cssVmjUoHx)
+
 A privacy-first Web3 wallet connector that avoids third-party tracking and exposes connection transparency.
 
 This library is intentionally minimal:
