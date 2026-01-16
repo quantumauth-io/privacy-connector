@@ -44,16 +44,5 @@ jobs:
         with:
           generate_release_notes: true
 
-      - name: Debug npm auth (safe)
-        run: |
-          echo "NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN:+SET}"
-          echo "NPM_TOKEN=${NPM_TOKEN:+SET}"
-          echo "npm_config__authToken=${npm_config__authToken:+SET}"
-          echo "npm_config_registry=$(npm config get registry)"
-          echo "--- user npmrc ---"
-          cat ~/.npmrc || true
-          echo "--- project npmrc ---"
-          cat .npmrc || true
-
-      - name: Publish to npm
-        run: pnpm publish --no-git-checks --provenance
+      - name: Publish to npm (OIDC)
+        run: npm publish --provenance --access public
