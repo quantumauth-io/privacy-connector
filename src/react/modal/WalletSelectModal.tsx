@@ -1,6 +1,19 @@
 import React, { useEffect, useMemo } from "react";
 import type { ConnectorInfo, ConnectorDisclosure, WalletCandidate } from "../../core";
 import { QuantumAuthLogo } from "../components/QuantumAuthLogo";
+import { createPortal } from "react-dom";
+
+function Portal(props: { children: React.ReactNode }) {
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
+    return createPortal(props.children, document.body);
+}
+
 
 type Brand = {
     name?: string;            // e.g. "QuantumAuth"
@@ -225,6 +238,7 @@ export function WalletSelectModal(props: {
 
 
     return (
+        <Portal>
         <div
             role="dialog"
             aria-modal="true"
@@ -648,5 +662,6 @@ export function WalletSelectModal(props: {
                 </div>
             </div>
         </div>
+        </Portal>
     );
 }
