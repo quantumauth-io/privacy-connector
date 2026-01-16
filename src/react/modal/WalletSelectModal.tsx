@@ -16,9 +16,9 @@ function Portal(props: { children: React.ReactNode }) {
 
 
 type Brand = {
-    name?: string;            // e.g. "QuantumAuth"
-    logoSrc?: string;         // e.g. "/quantumauth.svg" (or data-uri)
-    logoAlt?: string;         // default: "QuantumAuth"
+    name?: string;
+    logoSrc?: string;
+    logoAlt?: string;
 };
 
 function usePrefersDark(): boolean {
