@@ -222,6 +222,16 @@ export function WalletSelectModal(props: {
         return () => window.removeEventListener("keydown", onKeyDown);
     }, [open, onClose]);
 
+    useEffect(() => {
+        if (!open) return;
+
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = prev;
+        };
+    }, [open]);
+
     if (!open) return null;
 
     const mediation = formatMediation(connectorInfo?.mediation);
@@ -260,11 +270,12 @@ export function WalletSelectModal(props: {
             <div
                 style={{
                     width: "min(560px, 100%)",
+                    maxHeight: "min(80vh, 720px)",
+                    overflow: "auto",
                     borderRadius: 16,
                     background: t.cardBg,
                     color: t.text,
                     boxShadow: t.shadow,
-                    overflow: "hidden",
                     border: `1px solid ${t.border}`,
                 }}
             >
