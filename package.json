@@ -1,6 +1,6 @@
 {
   "name": "@quantumauth/privacy-connector",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A privacy-first Web3 wallet connector that avoids third-party tracking and exposes connection transparency.",
   "license": "Apache-2.0",
   "repository": {
